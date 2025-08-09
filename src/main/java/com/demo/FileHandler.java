@@ -29,10 +29,8 @@ public class FileHandler implements Runnable {
     private boolean briefStatistics;
     @Option(names = "-f")
     private boolean completeStatistics;
-
     @Option(names = "-o")
     private String thePathToFiles;
-
 
     int count = 0;
     BigDecimal sum = BigDecimal.ZERO;
