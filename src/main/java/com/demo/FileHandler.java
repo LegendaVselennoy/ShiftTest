@@ -10,10 +10,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalDouble;
 
 @Command(name = "File Handler", version = "file 1.0",
         description = "Processes the input file and writes the result to the output file")
@@ -29,13 +29,18 @@ public class FileHandler implements Runnable {
     private boolean briefStatistics;
     @Option(names = "-f")
     private boolean completeStatistics;
+
+    @Option(names = "-o")
+    private String thePathToFiles;
+
+
     int count = 0;
-    double sum = 0.0;
-    private OptionalDouble average;
-    private Optional<Double> min;
-    private Optional<Double> max;
-    private Optional<Integer> minLength;
-    private Optional<Integer> maxLength;
+    BigDecimal sum = BigDecimal.ZERO;
+    private BigDecimal average = BigDecimal.ZERO;
+    private Optional<Double> min = Optional.empty();
+    private Optional<BigDecimal> max = Optional.empty();
+    private Optional<Integer> minLength = Optional.empty();
+    private Optional<Integer> maxLength = Optional.empty();
     private final List<String> linesList = new ArrayList<>();
     private final List<String> linesListString = new ArrayList<>();
     private final InfoCheck infoCheck;
@@ -46,15 +51,21 @@ public class FileHandler implements Runnable {
         this.regexValidator = new RegexValidator();
     }
 
+    private void deleteFile(File file) {
+        if (file.length() == 0) {
+            file.delete();
+        }
+    }
+
     private void viewStatistics(boolean completeStat, boolean briefStat) {
         if (!completeStat) {
             System.out.println("Brief statistics contain only the number of elements written into outgoing files = " + count);
         }
         if (!briefStat) {
             System.out.println("Sum value: " + sum);
-            System.out.println("Average value: " + average.orElse(0.0));
+            System.out.println("Average value: " + average);
             System.out.println("Min value: " + min.orElse(0.0));
-            System.out.println("Max value: " + max.orElse(0.0));
+            System.out.println("Max value: " + max.orElse(BigDecimal.ZERO));
             System.out.println("Min length string: " + minLength.orElse(0));
             System.out.println("Max length string: " + maxLength.orElse(0));
         }
@@ -62,25 +73,30 @@ public class FileHandler implements Runnable {
 
     @Override
     public void run() {
-        String integersFile;
-        String floatsFile;
-        String stringsFile;
+        File integersFile;
+        File floatsFile;
+        File stringsFile;
 
-        if (nameBypassFiles != null) {
-            integersFile = new File(nameBypassFiles + "integers.txt").toString();
-            floatsFile = new File(nameBypassFiles + "floats.txt").toString();
-            stringsFile = new File(nameBypassFiles + "strings.txt").toString();
+        if (nameBypassFiles != null || thePathToFiles != null) {
+            if (nameBypassFiles == null) {
+                nameBypassFiles = "";
+            } else if (thePathToFiles == null) {
+                thePathToFiles = "";
+            }
+            integersFile = new File(thePathToFiles + nameBypassFiles + "integers.txt");
+            floatsFile = new File(thePathToFiles + nameBypassFiles + "floats.txt");
+            stringsFile = new File(thePathToFiles + nameBypassFiles + "strings.txt");
         } else {
-            integersFile = new File("integers.txt").toString();
-            floatsFile = new File("floats.txt").toString();
-            stringsFile = new File("strings.txt").toString();
+            integersFile = new File("integers.txt");
+            floatsFile = new File("floats.txt");
+            stringsFile = new File("strings.txt");
         }
         try (BufferedWriter bwIntegers = new BufferedWriter(new FileWriter(integersFile, theRegimen));
              BufferedWriter bwFloats = new BufferedWriter(new FileWriter(floatsFile, theRegimen));
              BufferedWriter bwStrings = new BufferedWriter(new FileWriter(stringsFile, theRegimen))) {
             if (files != null) {
                 for (File file : files) {
-                    try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                    try (BufferedReader br = new BufferedReader(new FileReader(file.getAbsolutePath()))) {
                         String line;
                         while ((line = br.readLine()) != null) {
                             String checkLine;
@@ -98,12 +114,6 @@ public class FileHandler implements Runnable {
                             checkLine = regexValidator.containsDoubleCheck(line);
                             if (!checkLine.isEmpty()) {
                                 linesList.add(line);
-
-                                sum = infoCheck.sumCheck(linesList);
-                                average = infoCheck.averageCheck(linesList);
-                                min = infoCheck.minCheck(linesList);
-                                max = infoCheck.maxCheck(linesList);
-
                                 bwFloats.write((line));
                                 bwFloats.newLine();
                                 if (briefStatistics) {
@@ -128,12 +138,19 @@ public class FileHandler implements Runnable {
                     }
                 }
             }
-            if (!theRegimen) {
+            sum = infoCheck.sumCheck(linesList);
+            average = infoCheck.averageCheck(linesList);
+            min = infoCheck.minCheck(linesList);
+            max = infoCheck.maxCheck(linesList);
+            if (!theRegimen && nameBypassFiles == null && thePathToFiles == null) {
                 viewStatistics(completeStatistics, briefStatistics);
             }
-
         } catch (IOException e) {
             System.out.println(e.getMessage());
+        } finally {
+            deleteFile(integersFile);
+            deleteFile(floatsFile);
+            deleteFile(stringsFile);
         }
     }
 }

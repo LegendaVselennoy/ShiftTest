@@ -1,11 +1,14 @@
 package com.demo;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalDouble;
-import java.util.stream.DoubleStream;
 
 public class InfoCheck {
+
+    private final int scale = 2;
 
     public Optional<Integer> minLengthCheck(List<String> lines) {
         return lines
@@ -21,13 +24,12 @@ public class InfoCheck {
                 .max(Integer::compareTo);
     }
 
-    public Optional<Double> maxCheck(List<String> lines) {
+    public Optional<BigDecimal> maxCheck(List<String> lines) {
         return lines
                 .stream()
-                .map(Double::parseDouble)
-                .max(Double::compareTo);
+                .map(BigDecimal::new)
+                .max(Comparator.naturalOrder());
     }
-
 
     public Optional<Double> minCheck(List<String> lines) {
         return lines
@@ -37,18 +39,18 @@ public class InfoCheck {
 
     }
 
-    public Double sumCheck(List<String> lines) {
-        return change(lines).sum();
-    }
-
-    public OptionalDouble averageCheck(List<String> lines) {
-        return change(lines).average();
-    }
-
-    private DoubleStream change(List<String> lines) {
+    public BigDecimal sumCheck(List<String> lines) {
         return lines
                 .stream()
-                .map(Double::parseDouble)
-                .mapToDouble(Double::doubleValue);
+                .map(BigDecimal::new)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal averageCheck(List<String> lines) {
+        if (!lines.isEmpty()) {
+            return sumCheck(lines)
+                    .divide(BigDecimal.valueOf(lines.size()), scale, RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ZERO;
     }
 }
